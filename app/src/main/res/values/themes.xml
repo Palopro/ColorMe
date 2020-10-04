@@ -13,4 +13,20 @@
         <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
         <!-- Customize your theme here. -->
     </style>
+
+    <!-- Text Themes -->
+    <style name="Header" parent="@style/HeaderText">
+        <item name="android:textColor">@color/black</item>
+        <item name="android:textStyle">normal</item>
+        <!--        <item name="android:fontFamily">@font/sf_ui_display_regular</item>-->
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">.12</item>
+    </style>
+
+    <style name="Body" parent="@style/BodyText">
+        <item name="android:textColor">@color/black</item>
+        <item name="android:textStyle">normal</item>
+        <!--        <item name="android:fontFamily">@font/sf_ui_display_light</item>-->
+        <item name="android:letterSpacing">.05</item>
+    </style>
 </resources>
