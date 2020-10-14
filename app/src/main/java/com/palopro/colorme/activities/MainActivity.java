@@ -6,10 +6,12 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
 
 import com.palopro.colorme.R;
+import com.palopro.colorme.ui.DividerSeparator;
 import com.palopro.colorme.ui.ListItem;
 import com.palopro.colorme.ui.MainListRecyclerViewAdapter;
 
@@ -34,6 +36,11 @@ public class MainActivity extends AppCompatActivity {
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(linearLayoutManager);
 
+        // Adding divider
+        DividerSeparator dividerSeparator = new DividerSeparator(this, Color.GRAY, 1);
+        recyclerView.addItemDecoration(dividerSeparator);
+
+        // Adding adapter
         MainListRecyclerViewAdapter adapter = new MainListRecyclerViewAdapter(getListItems());
         recyclerView.setAdapter(adapter);
         recyclerView.setClickable(true);
