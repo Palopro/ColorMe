@@ -8,7 +8,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.util.Log;
 
 import com.palopro.colorme.R;
 import com.palopro.colorme.ui.DividerSeparator;
@@ -44,8 +43,6 @@ public class MainActivity extends AppCompatActivity {
         MainListRecyclerViewAdapter adapter = new MainListRecyclerViewAdapter(getListItems());
         recyclerView.setAdapter(adapter);
         recyclerView.setClickable(true);
-
-        Log.d("TAG", getListItems().toString());
     }
 
 
@@ -65,7 +62,11 @@ public class MainActivity extends AppCompatActivity {
         listItems.add(new ListItem(
                 getString(R.string.video_hair_color_title),
                 getString(R.string.video_hair_color_description),
-                v -> Log.v("Activity","Pressed item")
+                v -> {
+                    Context context = v.getContext();
+                    Intent selectVideo = new Intent(context, VideoHairColorActivity.class);
+                    context.startActivity(selectVideo);
+                }
         ));
 
         return listItems;

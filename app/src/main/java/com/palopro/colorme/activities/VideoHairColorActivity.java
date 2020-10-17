@@ -1,7 +1,5 @@
 package com.palopro.colorme.activities;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
@@ -15,6 +13,8 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.VideoView;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.palopro.colorme.R;
 
@@ -134,6 +134,7 @@ public class VideoHairColorActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE && resultCode == Activity.RESULT_OK) {
             startProcessing(data.getData());
         } else {
@@ -181,7 +182,7 @@ public class VideoHairColorActivity extends AppCompatActivity {
         runOnUiThread(() -> {
             progressBar.setVisibility(View.INVISIBLE);
             progressText.setVisibility(View.INVISIBLE);
-            exportAction.setVisible(false);
+            exportAction.setVisible(true);
             videoView.setVideoURI(videoUri);
         });
     }

@@ -5,24 +5,29 @@ import android.graphics.Canvas;
 import android.util.AttributeSet;
 import android.view.View;
 
-import androidx.annotation.Nullable;
-
 public class OverlayView extends View {
-    private DrawCallback drawCallback;
+    private DrawCallback callback;
 
-    public OverlayView(Context context, @Nullable AttributeSet attrs) {
+    public OverlayView(final Context context, final AttributeSet attrs) {
         super(context, attrs);
     }
 
-    public void setCallback(DrawCallback drawCallback) {
-        this.drawCallback = drawCallback;
+    /**
+     * Interface defining the callback for client classes.
+     */
+    public interface DrawCallback {
+        void drawCallback(final Canvas canvas);
+    }
+
+    public void setCallback(final DrawCallback callback) {
+        this.callback = callback;
     }
 
     @Override
-    protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
-        if (drawCallback != null) {
-            drawCallback.drawCallback(canvas);
+    public synchronized void draw(final Canvas canvas) {
+        super.draw(canvas);
+        if(callback != null) {
+            callback.drawCallback(canvas);
         }
     }
 }

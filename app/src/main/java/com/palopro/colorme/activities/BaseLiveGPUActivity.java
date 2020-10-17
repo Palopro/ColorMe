@@ -2,7 +2,6 @@ package com.palopro.colorme.activities;
 
 import android.media.Image;
 import android.media.ImageReader;
-import android.media.ImageReader.OnImageAvailableListener;
 import android.os.Bundle;
 import android.util.Size;
 import android.widget.Button;
@@ -17,7 +16,8 @@ import ai.fritz.vision.FritzVisionImage;
 import ai.fritz.vision.FritzVisionOrientation;
 import ai.fritz.vision.ImageOrientation;
 
-public abstract class BaseLiveGPUActivity extends BaseCameraActivity implements OnImageAvailableListener {
+public abstract class BaseLiveGPUActivity extends BaseCameraActivity implements ImageReader.OnImageAvailableListener {
+
     private static final String TAG = BaseLiveGPUActivity.class.getSimpleName();
     private final AtomicBoolean computing = new AtomicBoolean(false);
 
@@ -28,22 +28,23 @@ public abstract class BaseLiveGPUActivity extends BaseCameraActivity implements 
     protected FritzSurfaceView fritzSurfaceView;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
     }
 
     @Override
-    protected void onPreviewSizeChosen(Size previewSize, Size cameraViewSize, int rotation) {
+    public void onPreviewSizeChosen(final Size size, final Size cameraSize, final int rotation) {
         orientation = FritzVisionOrientation.getImageOrientationFromCamera(this, cameraId);
         chooseModelBtn = findViewById(R.id.choose_model_button);
         cameraSwitchBtn = findViewById(R.id.camera_switch_button);
         fritzSurfaceView = findViewById(R.id.gpu_image_view);
 
-        cameraSwitchBtn.setOnClickListener(v -> toggleCameraFacingDirection());
+        cameraSwitchBtn.setOnClickListener(view -> toggleCameraFacingDirection());
+
     }
 
     @Override
-    public void onImageAvailable(ImageReader reader) {
+    public void onImageAvailable(final ImageReader reader) {
         final Image image = reader.acquireLatestImage();
 
         if (image == null) {
@@ -54,7 +55,6 @@ public abstract class BaseLiveGPUActivity extends BaseCameraActivity implements 
             image.close();
             return;
         }
-
         fritzVisionImage = FritzVisionImage.fromMediaImage(image, orientation);
         runInference(fritzVisionImage);
         image.close();
@@ -67,7 +67,6 @@ public abstract class BaseLiveGPUActivity extends BaseCameraActivity implements 
     public void onSetDebug(final boolean debug) {
 
     }
-
 
     protected abstract void runInference(FritzVisionImage fritzVisionImage);
 }

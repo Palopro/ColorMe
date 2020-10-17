@@ -15,7 +15,7 @@
     </style>
 
     <!-- Text Themes -->
-    <style name="HeaderText" parent="@android:style/TextAppearance.Medium">
+    <style name="Header" parent="@style/HeaderText">
         <item name="android:textColor">@color/textColorPrimary</item>
         <item name="android:textStyle">normal</item>
         <!--        <item name="android:fontFamily">@font/sf_ui_display_regular</item>-->
@@ -23,7 +23,7 @@
         <item name="android:letterSpacing">.12</item>
     </style>
 
-    <style name="BodyText" parent="@android:style/TextAppearance.Small">
+    <style name="Body" parent="@style/BodyText">
         <item name="android:textColor">@color/textColorPrimary</item>
         <item name="android:textStyle">normal</item>
         <!--        <item name="android:fontFamily">@font/sf_ui_display_light</item>-->

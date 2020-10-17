@@ -27,32 +27,35 @@ public class LiveHairColorActivity extends BaseLiveGPUActivity {
     private static final boolean RUN_ON_GPU = true;
 
     private FritzVisionSegmentationPredictor hairPredictor;
-    private FritzVisionSegmentationResult hairResult;
     private FritzVisionSegmentationPredictorOptions options;
 
     private SegmentationOnDeviceModel onDeviceModel;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(final Bundle savedInstanceState) {
         setCameraFacingDirection(CameraCharacteristics.LENS_FACING_FRONT);
         super.onCreate(savedInstanceState);
 
+        // Create the segmentation options
         options = new FritzVisionSegmentationPredictorOptions();
         options.useGPU = RUN_ON_GPU;
 
+        // Set the on-device model
         onDeviceModel = FritzVisionModels.getHairSegmentationOnDeviceModel(ModelVariant.FAST);
 
+        // Load the predictor when the activity is created (iff not running on the GPU)
         if (!RUN_ON_GPU) {
             hairPredictor = FritzVision.ImageSegmentation.getPredictor(onDeviceModel, options);
         }
     }
 
     @Override
-    protected void onPreviewSizeChosen(Size previewSize, Size cameraViewSize, int rotation) {
-        super.onPreviewSizeChosen(previewSize, cameraViewSize, rotation);
+    public void onPreviewSizeChosen(final Size size, final Size cameraSize, final int rotation) {
+        super.onPreviewSizeChosen(size, cameraSize, rotation);
 
-        VerticalSlideColorPicker verticalSlideColorPicker = findViewById(R.id.color_picker);
-        verticalSlideColorPicker.setOnColorChangeListener(selectedColor -> {
+        VerticalSlideColorPicker colorPicker = findViewById(R.id.color_picker);
+
+        // Change the mask color upon using the slider
+        colorPicker.setOnColorChangeListener(selectedColor -> {
             if (selectedColor != Color.TRANSPARENT) {
                 maskColor = selectedColor;
             }
@@ -66,12 +69,11 @@ public class LiveHairColorActivity extends BaseLiveGPUActivity {
 
     @Override
     protected void runInference(FritzVisionImage fritzVisionImage) {
-        if (RUN_ON_GPU && hairPredictor != null) {
+        // If you're using the GPU, it MUST run on the same thread
+        if (RUN_ON_GPU && hairPredictor == null) {
             hairPredictor = FritzVision.ImageSegmentation.getPredictor(onDeviceModel, options);
         }
-
-        assert hairPredictor != null;
-        hairResult = hairPredictor.predict(fritzVisionImage);
+        FritzVisionSegmentationResult hairResult = hairPredictor.predict(fritzVisionImage);
         Bitmap alphaMask = hairResult.buildSingleClassMask(MaskClass.HAIR, HAIR_ALPHA, options.confidenceThreshold, options.confidenceThreshold, maskColor);
         fritzSurfaceView.drawBlendedMask(fritzVisionImage, alphaMask, BLEND_MODE, getCameraFacingDirection() == CameraCharacteristics.LENS_FACING_FRONT);
     }

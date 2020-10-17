@@ -11,4 +11,5 @@
 
     <string name="video_path_key">video</string>
     <string name="processing">Processing…</string>
+    <string name="processing_percent">Processing %d%%</string>
 </resources>

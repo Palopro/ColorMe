@@ -13,6 +13,9 @@ android {
         versionCode 1
         versionName "1.0"
 
+        renderscriptTargetApi 21
+        renderscriptSupportModeEnabled true
+
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -26,6 +29,14 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+
+    aaptOptions {
+        noCompress "tflite"
+    }
+
+    lintOptions {
+        abortOnError false
+    }
 }
 
 dependencies {
@@ -37,8 +48,10 @@ dependencies {
     implementation 'com.github.veritas1:Android-VerticalSlideColorPicker:1.0.0'
 
     implementation 'ai.fritz:core:+'
-    implementation 'ai.fritz:vision:6.0.0'
-    implementation 'ai.fritz:vision-hair-segmentation-model-fast:3.0.0'
+    implementation 'ai.fritz:vision:+'
+    dependencies {
+        implementation 'ai.fritz:vision-hair-segmentation-model-fast:+'
+    }
 
 
     testImplementation 'junit:junit:4.+'

@@ -23,20 +23,15 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.palopro.colorme.R;
 import com.palopro.colorme.views.CameraConnectionFragment;
-import com.palopro.colorme.views.CameraOpenListener;
-import com.palopro.colorme.views.DrawCallback;
 import com.palopro.colorme.views.OverlayView;
 
 public abstract class BaseCameraActivity extends AppCompatActivity implements OnImageAvailableListener {
     private static final String TAG = BaseCameraActivity.class.getSimpleName();
-
     private static final int PERMISSIONS_REQUEST = 1;
     private static final long DELAY_OVERLAY_VISIBLE = 500;
 
     private static final String PERMISSION_CAMERA = Manifest.permission.CAMERA;
     private static final String PERMISSION_STORAGE = Manifest.permission.WRITE_EXTERNAL_STORAGE;
-
-    private boolean useCamera2API;
 
     private boolean debug = false;
 
@@ -49,7 +44,7 @@ public abstract class BaseCameraActivity extends AppCompatActivity implements On
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
-        Log.d(TAG, "OnCreate " + this);
+        Log.d(TAG, "onCreate " + this);
         super.onCreate(null);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
@@ -63,9 +58,19 @@ public abstract class BaseCameraActivity extends AppCompatActivity implements On
     }
 
     @Override
-    protected synchronized void onStart() {
+    public synchronized void onStart() {
         Log.d(TAG, "onStart " + this);
         super.onStart();
+    }
+
+    @Override
+    public synchronized void onResume() {
+        Log.d(TAG, "onResume " + this);
+        super.onResume();
+
+        handlerThread = new HandlerThread("inference");
+        handlerThread.start();
+        handler = new Handler(handlerThread.getLooper());
     }
 
     @Override
@@ -100,7 +105,7 @@ public abstract class BaseCameraActivity extends AppCompatActivity implements On
         return cameraFacingDirection;
     }
 
-    public void setCameraFacingDirection(int cameraFacingDirection) {
+    protected void setCameraFacingDirection(int cameraFacingDirection) {
         this.cameraFacingDirection = cameraFacingDirection;
     }
 
@@ -112,23 +117,20 @@ public abstract class BaseCameraActivity extends AppCompatActivity implements On
 
     @Override
     public void onRequestPermissionsResult(final int requestCode, final String[] permissions, final int[] grantResults) {
-        switch (requestCode) {
-            case PERMISSIONS_REQUEST: {
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED
-                        && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
-                    setFragment();
-                } else {
-                    requestPermission();
-                }
+        if (requestCode == PERMISSIONS_REQUEST) {
+            if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                    && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
+                setFragment();
+            } else {
+                requestPermission();
             }
         }
     }
 
     private boolean hasPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            return checkSelfPermission(PERMISSION_CAMERA) == PackageManager.PERMISSION_GRANTED
-                    && checkSelfPermission(PERMISSION_STORAGE) == PackageManager.PERMISSION_GRANTED;
+            return checkSelfPermission(PERMISSION_CAMERA) == PackageManager.PERMISSION_GRANTED && checkSelfPermission(PERMISSION_STORAGE) == PackageManager.PERMISSION_GRANTED;
         } else {
             return true;
         }
@@ -143,54 +145,38 @@ public abstract class BaseCameraActivity extends AppCompatActivity implements On
         }
     }
 
-    private void setFragment() {
+    protected void setFragment() {
         cameraId = chooseCamera();
-        fragment = CameraConnectionFragment.newInstance(
-                new CameraConnectionFragment.ConnectionCallback() {
-                    @Override
-                    public void onPreviewSizeChosen(Size size, Size cameraViewSize, int cameraRotation) {
-                        BaseCameraActivity.this.onPreviewSizeChosen(size, cameraViewSize, cameraRotation);
-                    }
-                },
-                this,
-                getLayoutId(),
-                getDesiredPreviewFrameSize(),
-                new CameraOpenListener() {
-                    @Override
-                    public void onCameraOpened() {
-                        final Handler handler = new Handler();
-                        handler.postDelayed(
-                                new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        runOnUiThread(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                OverlayView overlayView = findViewById(R.id.overlay);
-                                                if (overlayView != null) {
-                                                    overlayView.setVisibility(View.VISIBLE);
-                                                }
-                                            }
-                                        });
-                                    }
-                                }, DELAY_OVERLAY_VISIBLE
-                        );
-                    }
-                }
-        );
+        fragment =
+                CameraConnectionFragment.newInstance(
+                        BaseCameraActivity.this::onPreviewSizeChosen,
+                        this,
+                        getLayoutId(),
+                        getDesiredPreviewFrameSize(),
+                        () -> {
+                            final Handler handler = new Handler();
+                            handler.postDelayed(
+                                    () -> runOnUiThread(() -> {
+                                        OverlayView overlay = findViewById(R.id.overlay);
+                                        if (overlay != null) {
+                                            overlay.setVisibility(View.VISIBLE);
+                                        }
+                                    }), DELAY_OVERLAY_VISIBLE);
+                        });
 
         getFragmentManager()
                 .beginTransaction()
-                .replace(R.id.camera_frame, fragment)
+                .replace(R.id.camera_container, fragment)
                 .commit();
 
         fragment.setCamera(cameraId);
+
     }
 
     protected void toggleCameraFacingDirection() {
-        final OverlayView overlayView = findViewById(R.id.overlay);
-        if (overlayView != null) {
-            overlayView.setVisibility(View.INVISIBLE);
+        final OverlayView overlay = findViewById(R.id.overlay);
+        if (overlay != null) {
+            overlay.setVisibility(View.INVISIBLE);
         }
 
         if (cameraFacingDirection == CameraCharacteristics.LENS_FACING_FRONT) {
@@ -204,25 +190,29 @@ public abstract class BaseCameraActivity extends AppCompatActivity implements On
     }
 
     private String chooseCamera() {
-        final CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        final CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         try {
-            for (final String cameraId : cameraManager.getCameraIdList()) {
-                final CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraId);
+            for (final String cameraId : manager.getCameraIdList()) {
+                final CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
 
-                final Integer facing = cameraCharacteristics.get(CameraCharacteristics.LENS_FACING);
+                // We don't use a front facing camera in this sample.
+                final Integer facing = characteristics.get(CameraCharacteristics.LENS_FACING);
                 if (facing != null && facing != cameraFacingDirection) {
                     continue;
                 }
 
                 final StreamConfigurationMap map =
-                        cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+                        characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
                 if (map == null) {
                     continue;
                 }
 
-                useCamera2API = (facing == CameraCharacteristics.LENS_FACING_EXTERNAL)
-                        || isHardwareLevelSupported(cameraCharacteristics,
+                // Fallback to camera1 API for internal cameras that don't have full support.
+                // This should help with legacy situations where using the camera2 API causes
+                // distorted or otherwise broken previews.
+                boolean useCamera2API = (facing == CameraCharacteristics.LENS_FACING_EXTERNAL)
+                        || isHardwareLevelSupported(characteristics,
                         CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL);
                 Log.i(TAG, "Camera API lv2?: " + useCamera2API);
                 return cameraId;
@@ -234,6 +224,7 @@ public abstract class BaseCameraActivity extends AppCompatActivity implements On
         return null;
     }
 
+    // Returns true if the device supports the required hardware level, or better.
     private boolean isHardwareLevelSupported(
             CameraCharacteristics characteristics, int requiredLevel) {
         int deviceLevel = characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL);
@@ -244,19 +235,20 @@ public abstract class BaseCameraActivity extends AppCompatActivity implements On
         return requiredLevel <= deviceLevel;
     }
 
+
     public boolean isDebug() {
         return debug;
     }
 
     public void requestRender() {
-        final OverlayView overlay = (OverlayView) findViewById(R.id.overlay);
+        final OverlayView overlay = findViewById(R.id.overlay);
         if (overlay != null) {
             overlay.postInvalidate();
         }
     }
 
-    public void setCallback(final DrawCallback callback) {
-        final OverlayView overlay = (OverlayView) findViewById(R.id.overlay);
+    public void setCallback(final OverlayView.DrawCallback callback) {
+        final OverlayView overlay = findViewById(R.id.overlay);
         if (overlay != null) {
             overlay.setCallback(callback);
         }
@@ -284,3 +276,4 @@ public abstract class BaseCameraActivity extends AppCompatActivity implements On
         return new Size(640, 480);
     }
 }
+
